@@ -2,6 +2,12 @@
 
 All notable changes to **flycanon-sdk** (Python) are documented here.
 
+## [26.10.5] - 2026-10-17
+
+### Changed
+
+- Align package and User-Agent version metadata with the server's installed migration CLI fix. SDK behavior and HTTP contracts are unchanged; the `26.10.4` SDK remains compatible.
+
 ## [26.10.0] - 2026-10-12
 
 ### Changed

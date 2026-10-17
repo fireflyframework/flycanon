@@ -41,7 +41,7 @@ Compatible with **flycanon service version `26.10.x`**.
 
 | SDK | Service |
 |-----|---------|
-| `26.10.4` | `26.10.x` (same request/response schemas; workspace creation requires matching scope) |
+| `26.10.5` | `26.10.x` (same request/response schemas; workspace creation requires matching scope) |
 | `26.5.7` | `26.5.x` |
 
 ## Install
@@ -50,7 +50,7 @@ Compatible with **flycanon service version `26.10.x`**.
 <dependency>
   <groupId>com.firefly</groupId>
   <artifactId>flycanon-sdk</artifactId>
-  <version>26.10.4</version>
+  <version>26.10.5</version>
 </dependency>
 ```
 
@@ -418,7 +418,7 @@ use).
 ## Versioning
 
 The SDK pins its version to the service's CalVer (`YY.MM.PP`), so
-`flycanon-sdk@26.10.4` is the matching client for service version
+`flycanon-sdk@26.10.5` is the matching client for service version
 `26.10.x`. Upgrade the SDK in lockstep with the service. Both
 clients (`CanonClient`, `ReactiveCanonClient`) ship from the same
 artifact -- no separate dependency to manage.

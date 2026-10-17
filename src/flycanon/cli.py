@@ -23,7 +23,8 @@ Subcommands:
                            module is on the path; the subcommand is
                            silently dropped from the parser otherwise so
                            a bare bootstrap install still parses.
-* ``flycanon migrate``  -- run ``alembic upgrade head`` against the DB.
+* ``flycanon migrate``  -- run ``alembic upgrade head`` against the DB,
+                           using ``alembic.ini`` in the working directory.
 * ``flycanon reindex``  -- re-embed a corpus into a new embedding set and
                            switch to it atomically, plus ``--list`` /
                            ``--activate`` / ``--rollback`` / ``--drop-set``.
@@ -44,6 +45,7 @@ import importlib.util
 import logging
 import os
 import sys
+from pathlib import Path
 
 from flycanon.config import get_settings
 
@@ -329,12 +331,20 @@ def _confirmed(yes: bool) -> bool:
 
 
 def cmd_migrate(_: argparse.Namespace) -> int:
-    """Apply Alembic migrations."""
+    """Apply Alembic migrations from the operator's working directory."""
     from alembic import command
     from alembic.config import Config as AlembicConfig
 
-    here = os.path.dirname(os.path.abspath(__file__))
-    cfg = AlembicConfig(os.path.join(here, "..", "..", "alembic.ini"))
+    config_path = Path.cwd() / "alembic.ini"
+    if not config_path.is_file():
+        print(
+            f"Migration configuration is missing or not a file: {config_path}. "
+            "Run from the working directory containing alembic.ini and migrations/ "
+            "from the matching release source archive.",
+            file=sys.stderr,
+        )
+        return 1
+    cfg = AlembicConfig(str(config_path))
     settings = get_settings()
     cfg.set_main_option("sqlalchemy.url", settings.database_url)
     command.upgrade(cfg, "head")
@@ -369,7 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
         sub_worker = sub.add_parser("worker", help="Run the ingestion EDA worker")
         sub_worker.set_defaults(func=cmd_worker)
 
-    sub_migrate = sub.add_parser("migrate", help="Apply database migrations")
+    sub_migrate = sub.add_parser("migrate", help="Apply database migrations using ./alembic.ini")
     sub_migrate.set_defaults(func=cmd_migrate)
 
     sub_reindex = sub.add_parser(

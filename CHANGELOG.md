@@ -2,6 +2,17 @@
 
 All notable changes to **flycanon** are documented here.
 
+## [26.10.5] - 2026-10-17
+
+### Fixed
+
+- Select the operator's working-directory `alembic.ini` for `flycanon migrate`. Installed wheels now use the reviewed release scaffold instead of looking relative to `site-packages`. Missing or non-file configuration returns a nonzero exit with setup guidance before migration starts; parent and package directories are not searched. The configured database URL and `upgrade head` behavior are retained.
+- Document the working-directory contract and the direct Alembic workaround for retained `26.10.4` wheels. The source archive remains the migration/configuration scaffold; wheel contents, migrations and listener behavior are unchanged.
+
+### Distribution
+
+- Align server and Python/Java SDK version metadata at `26.10.5`. SDK behavior, HTTP contracts and runtime dependency pins are unchanged.
+
 ## [26.10.4] - 2026-10-14
 
 ### Fixed
