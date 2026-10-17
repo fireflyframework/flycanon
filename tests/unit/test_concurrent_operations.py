@@ -42,7 +42,11 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
+import pytest_asyncio
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
+from flycanon.models.entities import Base
 from flycanon.models.entities.candidate import CandidateRow
 from flycanon.models.entities.ingest_job import IngestJobRow
 from flycanon.models.entities.knowledge_item import KnowledgeItemRow
@@ -52,6 +56,40 @@ from flycanon.models.entities.knowledge_item import KnowledgeItemRow
 # exercise multi-tenant isolation -- that's covered by the dedicated
 # pg-isolation suite (test_pgvector_scope_isolation.py et al.).
 _SCOPE: dict[str, str] = {"tenant_id": "default", "workspace_id": "default"}
+
+
+@pytest_asyncio.fixture
+async def engine(tmp_path):
+    # In-memory SQLite shares one transaction across concurrent AsyncSessions.
+    database = tmp_path / "concurrency.sqlite3"
+    instance = create_async_engine(f"sqlite+aiosqlite:///{database}", future=True)
+    async with instance.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        yield instance
+    finally:
+        await instance.dispose()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_sessions_use_distinct_database_connections(engine):
+    async with engine.connect() as first, engine.connect() as second:
+        first_raw = await first.get_raw_connection()
+        second_raw = await second.get_raw_connection()
+        assert first_raw.driver_connection is not second_raw.driver_connection
+
+
+@pytest.mark.asyncio
+async def test_observer_rollback_cannot_discard_another_connection_write(engine):
+    async with engine.begin() as setup:
+        await setup.execute(text("CREATE TABLE transaction_isolation_probe (id INTEGER PRIMARY KEY)"))
+    async with engine.connect() as writer, engine.connect() as observer:
+        await writer.execute(text("INSERT INTO transaction_isolation_probe VALUES (1)"))
+        before = await observer.scalar(text("SELECT COUNT(*) FROM transaction_isolation_probe"))
+        await observer.rollback()
+        await writer.commit()
+        after = await observer.scalar(text("SELECT COUNT(*) FROM transaction_isolation_probe"))
+    assert {"before_commit": before, "after_commit": after} == {"before_commit": 0, "after_commit": 1}
 
 
 @pytest.fixture

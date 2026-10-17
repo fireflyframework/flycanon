@@ -8,6 +8,7 @@ All notable changes to **flycanon** are documented here.
 
 - Select the operator's working-directory `alembic.ini` for `flycanon migrate`. Installed wheels now use the reviewed release scaffold instead of looking relative to `site-packages`. Missing or non-file configuration returns a nonzero exit with setup guidance before migration starts; parent and package directories are not searched. The configured database URL and `upgrade head` behavior are retained.
 - Document the working-directory contract and the direct Alembic workaround for retained `26.10.4` wheels. The source archive remains the migration/configuration scaffold; wheel contents, migrations and listener behavior are unchanged.
+- Give concurrency unit tests independent SQLite connections through a module-local temporary file database. Causal checks cover distinct connections and rollback isolation; existing service assertions, production transactions and ordinary unit fixtures are unchanged.
 
 ### Distribution
 
