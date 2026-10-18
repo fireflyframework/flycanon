@@ -43,7 +43,7 @@ For a host installation using the released wheel, follow [Install the released s
 
 ```bash
 docker pull ghcr.io/fireflyframework/flycanon:latest          # latest main
-docker pull ghcr.io/fireflyframework/flycanon:26.10.4          # specific release
+docker pull ghcr.io/fireflyframework/flycanon:26.10.5          # specific release
 docker pull ghcr.io/fireflyframework/flycanon:26.10            # latest 26.10.x
 ```
 
@@ -305,6 +305,8 @@ GRANT ALL ON SCHEMA public TO canon;
 
 Alembic migrations live under [`migrations/`](../migrations). Run
 once per deploy:
+
+For a host installation, run `flycanon migrate` from the reviewed release scaffold containing `alembic.ini` and `migrations/`. The CLI selects that working directory's configuration and keeps `FLYCANON_DATABASE_URL` as the database selection. See [Install the released server](released-server-install.md) for the retained `26.10.4` wheel workaround.
 
 ```bash
 docker run --rm \
@@ -681,12 +683,12 @@ The recommended upgrade dance:
 
 ```bash
 # 1. Pull the new image
-docker pull ghcr.io/fireflyframework/flycanon:26.10.4
+docker pull ghcr.io/fireflyframework/flycanon:26.10.5
 
 # 2. Run migrations against the live database
 docker run --rm \
   --env-file .env \
-  ghcr.io/fireflyframework/flycanon:26.10.4 migrate
+  ghcr.io/fireflyframework/flycanon:26.10.5 migrate
 
 # 3. Roll the API + worker deployments
 docker compose --env-file .env up -d

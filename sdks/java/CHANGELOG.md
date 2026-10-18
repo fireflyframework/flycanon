@@ -6,6 +6,12 @@ The SDK uses CalVer (`YY.MM.Patch`). Breaking changes are signalled
 in the entry header and the **Breaking** section, not in the version
 number (CalVer has no "major" axis to bump).
 
+## [26.10.5] - 2026-10-17
+
+### Changed
+
+- Align Maven and User-Agent version metadata with the server's installed migration CLI fix. SDK behavior and HTTP contracts are unchanged; the `26.10.4` SDK remains compatible.
+
 ## [26.10.0] - 2026-10-12
 
 ### Changed
