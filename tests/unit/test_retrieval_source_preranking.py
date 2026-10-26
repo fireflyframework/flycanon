@@ -2,12 +2,13 @@
 """Admitted source membership precedes each ranked candidate window."""
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from test_retrieval_service_threads_scope import _make_retrieval_service
 
+from flycanon.core.services.retrieval.corpus_factory import CorpusContext
 from flycanon.core.services.retrieval.fusion import ChunkHit, StoredChunk
-from flycanon.core.services.retrieval.retrieval_service import Hit, RetrievalFilters
+from flycanon.core.services.retrieval.retrieval_service import Hit, RetrievalFilters, RetrievalService
 
 
 class RankedCorpus:
@@ -77,7 +78,18 @@ def service(channel):
     rows += [StoredChunk("wanted-chunk", "admitted", "current", 0, "official admitted API content")]
     corpus = RankedCorpus(rows, channel != "vector")
     vectors = RankedVectors(rows, channel != "bm25")
-    svc = _make_retrieval_service(corpus=corpus, vector_store=vectors)
+    embeddings = MagicMock()
+    embeddings.embed_one = AsyncMock(return_value=[0.1, 0.2, 0.3])
+    svc = RetrievalService(
+        context=CorpusContext(corpus=corpus, vector_store=vectors, backend="test"),
+        embeddings=embeddings,
+        source_repository=MagicMock(),
+        chunk_repository=MagicMock(),
+        knowledge_repository=MagicMock(),
+        default_top_k=5,
+        default_per_query_k=20,
+        rrf_k=60,
+    )
 
     async def hydrate(hits):
         return [
