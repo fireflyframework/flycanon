@@ -118,6 +118,8 @@ for private dev stacks only.
 | `POST` | `/api/v1/query/stream` | Same as `/query` but streams the answer as Server-Sent Events. |
 | `POST` | `/api/v1/query/suggest` | Suggest follow-up questions for an existing answer. Body: `AnswerRequest`. |
 
+A nonempty `source_ids` selector is intersected with the authenticated tenant and workspace before BM25 and dense candidate ranking, fusion and `top_k` selection. Sources with no matching chunks return no hits; retrieval never falls back to the global source set. Omitting `source_ids`, using `null`, or supplying an empty list retains the existing meaning of no additional source constraint within the authenticated scope. Hydrated source checks remain active after ranking as defense in depth. Other knowledge metadata filters retain their documented hydration behavior.
+
 ### Answer mode (RLM default / RAG deprecated)
 
 The answer endpoints (`/api/v1/query`, `/api/v1/query/stream`, and the

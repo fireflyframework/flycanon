@@ -66,7 +66,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -184,6 +184,7 @@ class PostgresCorpus:
         top_k: int = 30,
         tenant_id: str = "default",
         workspace_id: str = "default",
+        source_ids: Sequence[str] | None = None,
     ) -> list[ChunkHit]:
         """Return the top-``top_k`` chunks ranked by Postgres BM25.
 
@@ -206,8 +207,9 @@ class PostgresCorpus:
         q = (query or "").strip()
         if not q:
             return []
+        source_predicate = "" if source_ids is None else "AND c.source_id = ANY(CAST(:source_ids AS text[]))"
         sql = text(
-            """
+            f"""
             SELECT
                 c.id          AS chunk_id,
                 c.source_id   AS doc_id,
@@ -221,6 +223,7 @@ class PostgresCorpus:
             JOIN canon_sources AS s ON s.id = c.source_id
             WHERE c.tenant_id = :tenant_id
               AND c.workspace_id = :workspace_id
+              {source_predicate}
               AND c.tsv @@ plainto_tsquery(:cfg, :q)
             ORDER BY score DESC, c.created_at DESC
             LIMIT :k
@@ -235,6 +238,7 @@ class PostgresCorpus:
                     "k": int(top_k),
                     "tenant_id": tenant_id,
                     "workspace_id": workspace_id,
+                    **({"source_ids": list(source_ids)} if source_ids is not None else {}),
                 },
             )
             rows = result.mappings().all()

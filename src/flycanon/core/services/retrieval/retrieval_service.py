@@ -14,15 +14,10 @@
 
 """Hybrid retrieval service.
 
-Wraps :class:`HybridRetriever`, hydrates the resulting
-:class:`ChunkHit` rows with Postgres metadata, and applies the
-caller-supplied filters (domain / jurisdiction / status / explicit
-ids) as a post-retrieval pass.
-
-Filters run AFTER retrieval because :class:`HybridRetriever` does not
-expose pre-filter predicates -- pulling more candidates and trimming
-locally is the strategy here. The ``per_query_k`` knob lets callers
-compensate by widening the retrieval window.
+Binds explicit source membership into both BM25 and dense reads before their
+ranked candidate windows. Hydration still applies every caller filter as a
+defence-in-depth pass; knowledge status, domain and jurisdiction continue to
+use their hydrated metadata.
 """
 
 from __future__ import annotations
@@ -33,6 +28,8 @@ import time
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+from fireflyframework_agentic.vectorstores.types import SearchFilter
 
 from flycanon.core.services.embeddings import (
     EmbeddingRegistry,
@@ -155,6 +152,8 @@ class RetrievalService:
                 "callers must thread the tenant scope explicitly."
             )
 
+        source_ids = tuple(filters.source_ids) if filters is not None and filters.source_ids else None
+
         from flycanon.core.services.retrieval.fusion import HybridRetriever
 
         # Which embedding space this workspace's corpus lives in, and the
@@ -174,12 +173,14 @@ class RetrievalService:
             self._context.corpus,
             tenant_id=tenant_id,
             workspace_id=workspace_id,
+            source_ids=source_ids,
         )
         scoped_vector_store = _ScopedVectorStore(
             self._context.vector_store,
             tenant_id=tenant_id,
             workspace_id=workspace_id,
             enabled=binding is not None or self._embedding_sets is None,
+            source_ids=source_ids,
         )
         # The embedder protocol is honoured by EmbeddingService
         # via the ``embed`` method; pass it through directly.
@@ -489,10 +490,13 @@ class _ScopedCorpus:
     through :class:`IndexService` directly, with its own scope threading.
     """
 
-    def __init__(self, inner: object, *, tenant_id: str, workspace_id: str) -> None:
+    def __init__(
+        self, inner: object, *, tenant_id: str, workspace_id: str, source_ids: Sequence[str] | None = None
+    ) -> None:
         self._inner = inner
         self._tenant_id = tenant_id
         self._workspace_id = workspace_id
+        self._source_ids = source_ids
 
     async def bm25_search(self, query: str, *, top_k: int = 30):  # noqa: ANN201
         return await self._inner.bm25_search(  # type: ignore[attr-defined]
@@ -500,6 +504,7 @@ class _ScopedCorpus:
             top_k=top_k,
             tenant_id=self._tenant_id,
             workspace_id=self._workspace_id,
+            **({"source_ids": self._source_ids} if self._source_ids is not None else {}),
         )
 
     async def get_chunks(self, chunk_ids: list[str]):  # noqa: ANN201
@@ -524,10 +529,19 @@ class _ScopedVectorStore:
     foreign-scope chunk is dropped when hydration can't find it.
     """
 
-    def __init__(self, inner: object, *, tenant_id: str, workspace_id: str, enabled: bool = True) -> None:
+    def __init__(
+        self,
+        inner: object,
+        *,
+        tenant_id: str,
+        workspace_id: str,
+        enabled: bool = True,
+        source_ids: Sequence[str] | None = None,
+    ) -> None:
         self._inner = inner
         self._tenant_id = tenant_id
         self._workspace_id = workspace_id
+        self._source_ids = source_ids
         # ``False`` when the workspace has no embedding set: there are no
         # vectors to find, so the dense half returns nothing rather than
         # querying one embedding space with a vector from another. BM25 still
@@ -542,4 +556,9 @@ class _ScopedVectorStore:
             top_k=top_k,
             tenant_id=self._tenant_id,
             workspace_id=self._workspace_id,
+            **(
+                {"filters": [SearchFilter(field="source_id", operator="in", value=list(self._source_ids))]}
+                if self._source_ids is not None
+                else {}
+            ),
         )

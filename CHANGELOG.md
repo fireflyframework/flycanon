@@ -2,6 +2,19 @@
 
 All notable changes to **flycanon** are documented here.
 
+## [26.10.6] - 2026-10-26
+
+### Fixed
+
+- Apply nonempty `source_ids` membership before the BM25 and dense candidate windows, Reciprocal Rank Fusion and `top_k` selection. Lower-ranked admitted sources are no longer lost behind unrelated higher-ranked candidates.
+- Intersect source membership with the authenticated tenant and workspace in both retrieval channels. A selected source with no matching chunks returns no hits; retrieval never falls back to the global source set. Hydrated filtering remains defense in depth.
+- Preserve the existing request schema and the meaning of omitted, `null` and empty-list source selectors: no additional source constraint within the authenticated scope. Knowledge metadata filters retain their hydration behavior.
+
+### Distribution
+
+- Align server and Python/Java SDK version metadata at `26.10.6`. SDK search methods, runtime dependency pins, database migrations, source intake and EDA event schemas are unchanged.
+- Retain pyfly `v26.09.04` and Agentic `26.10.1`. Upgrade the server to obtain the source-filter correction; compatible existing SDKs continue to work.
+
 ## [26.10.5] - 2026-10-17
 
 ### Fixed
